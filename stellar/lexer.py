@@ -24,7 +24,9 @@ TOKEN_TYPES = [
     ("COMET", r"Comet"),
     ("PLANET", r"Planet"),
     ("ASTEROID", r"Asteroid"),
+    ('PRINT', r'print'),
     ("IDENTIFIER", r"[a-zA-Z_]\w*"),
+
 ]
 
 # Define a pattern to match whitespace characters

@@ -5,27 +5,41 @@ import stellar_parser
 import llvm_code_generator
 import compiler
 from pprint import pprint
-
+import new_lexer
+import new_parser
 
 def process_file(file_path):
     with open(file_path, "r") as file:
         code = file.read()
-        tokens = lexer(code)
+    
+        lexer = new_lexer.Lexer(code)
+        tokens = lexer.parse()
         print(f"Lexer:")
         pprint(tokens, sort_dicts=False)
         print()
-        
-        ast = stellar_parser.parse_program(tokens)
+
+        parser = new_parser.Parser(tokens)
+        ast = parser.parse()
         print(f"Parser:")
         pprint(ast, sort_dicts=False)
         print()
-
+        ###
+        # tokens = lexer(code)
+        # print(f"Lexer:")
+        # pprint(tokens, sort_dicts=False)
+        # print()
+        # 
+        # ast = stellar_parser.parse_program(tokens)
+        # print(f"Parser:")
+        # pprint(ast, sort_dicts=False)
+        # print()
+        #
         llvm_generator = llvm_code_generator.LlvmGenerator(ast)
         print("Compiler:")
         print(llvm_generator.module)
+        print()
+        print("Result:")
         compiler.compile_stellar(str(llvm_generator.module))
-
-        # Process the tokens or perform further actions
 
 
 def process_directory(directory_path):
