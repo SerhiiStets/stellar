@@ -1,42 +1,32 @@
-import sys
 import os
-import llvm_code_generator
-import compiler
+import sys
 from pprint import pprint
+
+import compiler
+import llvm_code_generator
 import new_lexer
 import new_parser
+
 
 def process_file(file_path):
     with open(file_path, "r") as file:
         code = file.read()
-    
+
         lexer = new_lexer.Lexer(code)
         tokens = lexer.parse()
-        print(f"Lexer:")
+        print(f"\n\nLexer:\n")
         pprint(tokens, sort_dicts=False)
-        print()
 
         parser = new_parser.Parser(tokens)
         ast = parser.parse()
-        print(f"Parser:")
+        print(f"\n\nParser:\n")
         pprint(ast, sort_dicts=False)
-        print()
-        ###
-        # tokens = lexer(code)
-        # print(f"Lexer:")
-        # pprint(tokens, sort_dicts=False)
-        # print()
-        # 
-        # ast = stellar_parser.parse_program(tokens)
-        # print(f"Parser:")
-        # pprint(ast, sort_dicts=False)
-        # print()
-        #
+
         llvm_generator = llvm_code_generator.LlvmGenerator(ast)
-        print("Compiler:")
+        print("\n\nCompiler:\n")
         print(llvm_generator.module)
-        print()
-        print("Result:")
+
+        print("\nResult:")
         compiler.compile_stellar(str(llvm_generator.module))
 
 
@@ -63,6 +53,7 @@ def main():
         else:
             raise Exception("Not a stellar file.")
     elif os.path.isdir(path):
+        # TODO
         # If the provided path is a directory, process all files within it
         process_directory(path)
     else:

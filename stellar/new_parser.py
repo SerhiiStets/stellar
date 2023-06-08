@@ -1,12 +1,11 @@
-import re
-from os import stat
-from new_lexer import Token
 from abc import ABC, abstractmethod
+
+from new_lexer import Token
 
 variables = {}
 
-class BaseParser(ABC):
 
+class BaseParser(ABC):
     def __init__(self, tokens: list[Token]) -> None:
         self.tokens = tokens
         self.ast = []
@@ -15,15 +14,14 @@ class BaseParser(ABC):
     def parse(self):
         ...
 
-class Parser(BaseParser):
 
+class Parser(BaseParser):
     def __init__(self, tokens: list[Token]) -> None:
         super().__init__(tokens)
         self.parsers = {
             "IDENTIFIER": AssignmentStatementParser,
             "PRINT": PrintParser,
         }
-
 
     def parse(self):
         while self.tokens:
@@ -33,11 +31,12 @@ class Parser(BaseParser):
                 self.ast.append(parser.parse())
                 self.tokens.pop(0)
             else:
+                # TODO
                 parser = ParseNothing(self.tokens)
                 self.tokens.pop(0)
-                # raise RuntimeError(self.tokens)
 
         return self.ast
+
 
 class AssignmentStatementParser(BaseParser):
     def parse(self):
@@ -55,12 +54,13 @@ class AssignmentStatementParser(BaseParser):
                 "expression": expression,
             }
         elif self.tokens[0].token_type == "COLON":
-            self.tokens.pop(0) # skip COLON 
+            self.tokens.pop(0)  # skip COLON
             variable_type_token = self.tokens.pop(0)
             expression = None
             if "TYPE_" in variable_type_token.token_type:
                 variable_type = variable_type_token.token_type[5:]
             else:
+                # TODO
                 raise RuntimeError()
 
             if self.tokens[0].token_type == "EQUALS":
@@ -68,22 +68,21 @@ class AssignmentStatementParser(BaseParser):
                 expression_parser = ExpressionParser(self.tokens)
                 expression = expression_parser.parse()
             elif self.tokens[0].token_type != "SEMICOLON":
+                # TODO
                 raise RuntimeError()
-            # declaration = VariableDeclarationParser(self.tokens);
-            
+
             variables[variable_name] = {
                 "variable_type": variable_type,
-                "expression": expression
+                "expression": expression,
             }
             return {
                 "node_type": "variable_declaration",
                 "variable_name": variable_name,
                 "variable_type": variable_type,
-                "expression": expression
+                "expression": expression,
             }
         else:
             return []
-
 
 
 class ExpressionParser(BaseParser):
@@ -91,32 +90,47 @@ class ExpressionParser(BaseParser):
 
     def parse(self):
         left_parser = TermParser(self.tokens)
-        left_operand = left_parser.parse() 
+        left_operand = left_parser.parse()
 
-        while self.tokens and self.tokens[0].token_type in ["PLUS", "MINUS"] and self.tokens[0].token_type != "SEMICOLON":
+        while (
+            self.tokens
+            and self.tokens[0].token_type in ["PLUS", "MINUS"]
+            and self.tokens[0].token_type != "SEMICOLON"
+        ):
             operator = self.tokens.pop(0).token_type
             right_parser = TermParser(self.tokens)
             right_operand = right_parser.parse()
-            left_operand = {"node_type": "binary_operation", "operator": operator, "left_operand": left_operand, "right_operand": right_operand}
+            left_operand = {
+                "node_type": "binary_operation",
+                "operator": operator,
+                "left_operand": left_operand,
+                "right_operand": right_operand,
+            }
 
-        return left_operand 
-
-        # while self.tokens or self.tokens[0].token_type != "SEMICOLON":
-        #     pass
+        return left_operand
 
 
 class TermParser(ExpressionParser):
     def parse(self):
         left_factor = FactorParser(self.tokens)
-        left_operand = left_factor.parse() 
+        left_operand = left_factor.parse()
 
-        while self.tokens and self.tokens[0].token_type in ["MULTIPLY", "DIVIDE"] and self.tokens[0].token_type != "SEMICOLON":
+        while (
+            self.tokens
+            and self.tokens[0].token_type in ["MULTIPLY", "DIVIDE"]
+            and self.tokens[0].token_type != "SEMICOLON"
+        ):
             operator = self.tokens.pop(0).token_type
             right_parser = FactorParser(self.tokens)
             right_operand = right_parser.parse()
-            left_operand = {"node_type": "binary_operation", "operator": operator, "left_operand": left_operand, "right_operand": right_operand}
+            left_operand = {
+                "node_type": "binary_operation",
+                "operator": operator,
+                "left_operand": left_operand,
+                "right_operand": right_operand,
+            }
 
-        return left_operand 
+        return left_operand
 
 
 class FactorParser(ExpressionParser):
@@ -130,7 +144,7 @@ class FactorParser(ExpressionParser):
         else:
             parser = PrimaryParser(self.tokens)
             return parser.parse()
-        
+
 
 class PrimaryParser(BaseParser):
     def parse(self):
@@ -158,15 +172,17 @@ class PrimaryParser(BaseParser):
 
         raise ValueError(f"Invalid expression at position {self.tokens[0]}")
 
+
 class PrintParser(BaseParser):
     def parse(self):
-        self.tokens.pop(0) # pop print
+        self.tokens.pop(0)  # pop print
         if self.tokens[0].token_type != "LPAREN":
             raise RuntimeError()
 
         expression_parser = ExpressionParser(self.tokens)
         expression = expression_parser.parse()
         return {"node_type": "print_statement", "expression": expression}
+
 
 class ParseNothing(BaseParser):
     def parse(self):
@@ -175,4 +191,4 @@ class ParseNothing(BaseParser):
 
 if __name__ == "__main__":
     tokens = []
-    a = Parser(tokens) 
+    a = Parser(tokens)

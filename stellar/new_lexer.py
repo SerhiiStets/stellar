@@ -1,6 +1,8 @@
 import re
-import errors
 from dataclasses import dataclass
+
+import errors
+
 
 @dataclass
 class Token:
@@ -31,23 +33,17 @@ TOKEN_TYPES = [
     Token("LBRACE", r"{"),
     Token("RBRACE", r"}"),
     Token("COLON", r":"),
-    
     *VAR_TYPES,
     # Token("TYPE", r":\s*(int|float|str|list|dict)"),
-
-    Token("STRING", r'"(?:\\.|[^"])*"'),
-
-    # Token('FLOAT', r'\d+\.\d+'),
     Token("DOT", r"\."),
-
-    Token('PRINT', r'print'),
-
+    Token("PRINT", r"print"),
     Token("IDENTIFIER", r"[a-zA-Z_]\w*"),
 ]
 
 # Define a pattern to match whitespace characters
 WHITESPACE_PATTERN = r"\s+"
 COMMENT_PATTERN = r"/.*"
+
 
 class Lexer:
     def __init__(self, input_code) -> None:
@@ -61,11 +57,13 @@ class Lexer:
         while self._position < len(self.input_code):
             matched = False
 
-            if self.input_code[self._position] == '\n':
+            if self.input_code[self._position] == "\n":
                 self._line_number += 1
             # Skip whitespace characters
-            whitespace_match = re.match(WHITESPACE_PATTERN, self.input_code[self._position:])
-            comment_match = re.match(COMMENT_PATTERN, self.input_code[self._position:])
+            whitespace_match = re.match(
+                WHITESPACE_PATTERN, self.input_code[self._position :]
+            )
+            comment_match = re.match(COMMENT_PATTERN, self.input_code[self._position :])
             if whitespace_match:
                 self._position += whitespace_match.end()
                 continue
@@ -79,19 +77,20 @@ class Lexer:
 
                 if match:
                     value = match.group(0)
-                    token = Token(token.token_type, value, self._position, self._line_number)
+                    token = Token(
+                        token.token_type, value, self._position, self._line_number
+                    )
                     self.tokens.append(token)
                     self._position = match.end()
                     matched = True
                     break
 
             if not matched:
+                # TODO
                 raise errors.InvalidSymbol(
                     position=self._position,
                     code=self.input_code,
-                    line_number=self._line_number
-
+                    line_number=self._line_number,
                 )
 
         return self.tokens
-
