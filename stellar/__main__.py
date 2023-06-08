@@ -1,7 +1,5 @@
 import sys
 import os
-from lexer import lexer
-import stellar_parser
 import llvm_code_generator
 import compiler
 from pprint import pprint
