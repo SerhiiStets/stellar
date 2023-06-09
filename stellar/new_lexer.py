@@ -18,6 +18,7 @@ VAR_TYPES = [
     Token("TYPE_STRING", r"str"),
     Token("TYPE_LIST", r"list"),
     Token("TYPE_DICT", r"dict"),
+    Token("TYPE_BOOL", r"bool"),
 ]
 
 TOKEN_TYPES = [
