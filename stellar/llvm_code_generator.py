@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 from llvmlite import ir
 
 bool_t = ir.IntType(1)
@@ -15,12 +17,16 @@ PRINT_MAP = {
     "STR": "%s",
 }
 
-TYPE_MAP = {"INT": int32, "BOOL": bool_t}
 
 class LlvmGenerator:
-    def __init__(self, node) -> None:
+    def __init__(self, ast) -> None:
+        self.ast = ast
+
         # Create a new LLVM module
         self.module = ir.Module()
+
+        # Define a dictionary to store variable values
+        self.variables = {}
 
         # Create a new LLVM function
         self.function_type = ir.FunctionType(ir.VoidType(), [])
@@ -30,10 +36,6 @@ class LlvmGenerator:
         # Create a new LLVM builder
         self.builder = ir.IRBuilder(self.block)
 
-        # Define a dictionary to store variable values
-        self.variables = {}
-        self.node = node
-
         # Load the printf function
         self.printf_func = ir.Function(
             self.module,
@@ -41,25 +43,9 @@ class LlvmGenerator:
             name="printf",
         )
 
-        self.generate_llvm_ir(node)
+        self.generate_llvm_ir(self.ast)
 
         self.builder.ret_void()
-    
-    def create_string(self, string):
-        # Create a local format string
-        format_type = ir.ArrayType(int8, len(string) + 1)  # +1 for null terminator
-        format_variable = self.builder.alloca(format_type)  # Allocate memory for the format string
-        # Store each character of the format string in the allocated memory
-        for i, char in enumerate(string):
-            # Get the pointer to the i-th character in the format string
-            ptr = self.builder.gep(format_variable, [ir.Constant(int32, 0), ir.Constant(int32, i)])
-            # Store the ASCII value of the character in the memory location
-            self.builder.store(ir.Constant(int8, ord(char)), ptr)
-            # Add a null terminator to the end of the format string
-        ptr = self.builder.gep(format_variable, [ir.Constant(int32, 0), ir.Constant(int32, len(string))])
-        self.builder.store(ir.Constant(ir.IntType(8), 0), ptr)
-        return self.builder.bitcast(format_variable, void_pointer)
-
 
     def printf(self, expression):
         if not len(expression):
@@ -72,7 +58,8 @@ class LlvmGenerator:
             variable_type = variable["type"]
 
             format_str = f"{PRINT_MAP[variable_type]}\n"
-            a = self.create_string(format_str)
+
+            format_str_ptr = Str(self.builder, format_str).get()
 
             # format_str_const = ir.Constant(
             #     ir.ArrayType(int8, len(format_str)),
@@ -89,22 +76,17 @@ class LlvmGenerator:
             #
             # # Create a pointer to the format string
             # format_str_ptr = self.builder.bitcast(format_str_global, void_pointer)
-            #
+
             self.builder.call(
-                self.printf_func, [a, self.builder.load(variable["var"])]
+                self.printf_func, [format_str_ptr, self.builder.load(variable["var"])]
             )
         elif expression["node_type"] in PRINT_MAP:
             format_str = f"{PRINT_MAP[expression['node_type']]}\n"
-            a = self.create_string(format_str)
-            ptr_value = None
-            if expression["node_type"] == "INT":
-                value = ir.Constant(ir.IntType(32), expression["value"])
-                ptr_value = self.builder.bitcast(value, void_pointer)
-                
-            self.builder.call(
-                self.printf_func, [a, self.builder.load(ptr_value)]
-            )
+            format_str_ptr = Str(self.builder, format_str).get()
 
+            value = VariableGeneratorFactory.create_generator(self.builder, expression)
+
+            self.builder.call(self.printf_func, [format_str_ptr, value.get()])
 
     def parse_node(self, node):
         if node["node_type"] == "binary_operation":
@@ -128,7 +110,7 @@ class LlvmGenerator:
             else:
                 raise ValueError(f"Invalid operator: {operator}")
         elif node["node_type"] == "INT":
-            return ir.Constant(ir.IntType(32), node["value"])
+            return Int(node["value"]).get()
         elif node["node_type"] == "variable":
             return self.builder.load(self.variables[node["name"]]["var"])
         else:
@@ -168,3 +150,75 @@ class LlvmGenerator:
         elif isinstance(tree, dict):
             # TODO
             pass
+
+
+class LLVMGenerator(ABC):
+    @abstractmethod
+    def get(self, *args):
+        ...
+
+
+class VariableGeneratorFactory:
+    @staticmethod
+    def create_generator(builder, expression):
+        if expression["node_type"] == "STR":
+            return Str(builder, expression["value"])
+        elif expression["node_type"] == "INT":
+            return Int(expression["value"])
+        else:
+            # TODO
+            raise ValueError(f"Unsupported node type: {expression['node_type']}")
+
+
+class Str(LLVMGenerator):
+    def __init__(self, builder: ir.IRBuilder, string: str) -> None:
+        self.builder = builder
+        self.string = string
+
+    def get(self):
+        # Create a local format string
+        format_type = ir.ArrayType(int8, len(self.string) + 1)  # +1 for null terminator
+        format_variable = self.builder.alloca(
+            format_type
+        )  # Allocate memory for the format string
+        # Store each character of the format string in the allocated memory
+        for i, char in enumerate(self.string):
+            # Get the pointer to the i-th character in the format string
+            ptr = self.builder.gep(
+                format_variable, [ir.Constant(int32, 0), ir.Constant(int32, i)]
+            )
+            # Store the ASCII value of the character in the memory location
+            self.builder.store(ir.Constant(int8, ord(char)), ptr)
+
+        # Add a null terminator to the end of the format string
+        ptr = self.builder.gep(
+            format_variable,
+            [ir.Constant(int32, 0), ir.Constant(int32, len(self.string))],
+        )
+        self.builder.store(ir.Constant(ir.IntType(8), 0), ptr)
+        print(type(self.builder.bitcast(format_variable, void_pointer)))
+        # Bitcast the format string variable to an i8* type and return it
+        return self.builder.bitcast(format_variable, void_pointer)
+
+
+class Int(LLVMGenerator):
+    def __init__(self, integer) -> None:
+        self.integer = integer
+
+    def get(self) -> ir.Constant:
+        return ir.Constant(int32, self.integer)
+
+
+class Printf:
+    def __init__(self, module: ir.Module, builder: ir.IRBuilder) -> None:
+        self.module = module
+        self.builder = builder
+        # Load the printf function
+        self.printf_func = ir.Function(
+            self.module,
+            ir.FunctionType(int32, [void_pointer], var_arg=True),
+            name="printf",
+        )
+
+    def __call__(self):
+        self.builder.call(self.printf_func, [a, self.builder.load(variable["var"])])
