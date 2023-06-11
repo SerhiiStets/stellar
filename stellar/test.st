@@ -34,7 +34,7 @@ Galaxy A(){
 
 Star Divider(){
 
-  // public variables 
+  // public variables
   Asteroids {
       b: int;
     }
@@ -42,7 +42,7 @@ Star Divider(){
   // private variables
   Moons {
     }
-  
+
   // instance constructor
   AlphaCentauri(b: int){
       this.b = b;
@@ -50,7 +50,7 @@ Star Divider(){
 
   // public method
   Planet divide(a: int, c: int) -> int {
-      int d= this.b + a + c; 
+      int d= this.b + a + c;
       launch d;
     }
 
@@ -63,7 +63,6 @@ Star Divider(){
 
 Star Sun(){
   Planet Earth(argc: int, argv: list[str]){
-    
+
     }
   }
-

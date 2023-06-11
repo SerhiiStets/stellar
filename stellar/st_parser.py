@@ -1,14 +1,14 @@
 from abc import ABC, abstractmethod
 
-from new_lexer import Token
+from st_lexer import Token
 
-variables = {}
+variables: dict = {}
 
 
 class BaseParser(ABC):
     def __init__(self, tokens: list[Token]) -> None:
-        self.tokens = tokens
-        self.ast = []
+        self.tokens: list[Token] = tokens
+        self.ast: list[dict] = []
 
     @abstractmethod
     def parse(self):
@@ -189,8 +189,3 @@ class PrintParser(BaseParser):
 class ParseNothing(BaseParser):
     def parse(self):
         return []
-
-
-if __name__ == "__main__":
-    tokens = []
-    a = Parser(tokens)

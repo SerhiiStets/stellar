@@ -26,7 +26,7 @@ TOKEN_TYPES = [
     Token("PLUS", r"\+"),
     Token("MINUS", r"-"),
     Token("MULTIPLY", r"\*"),
-    Token("DIVIDE", r"/(?![/])"), # Matches '/' not followed by '/' 
+    Token("DIVIDE", r"/(?![/])"),  # Matches '/' not followed by '/'
     Token("LPAREN", r"\("),
     Token("RPAREN", r"\)"),
     Token("EQUALS", r"="),
@@ -50,7 +50,7 @@ COMMENT_PATTERN = r"//.*"
 class Lexer:
     def __init__(self, input_code) -> None:
         self.input_code = input_code
-        self.tokens = []
+        self.tokens: list[Token] = []
         self._position = 0
         self._pattern = None
         self._line_number = 0

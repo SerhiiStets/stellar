@@ -26,7 +26,7 @@ class LlvmGenerator:
         self.module = ir.Module()
 
         # Define a dictionary to store variable values
-        self.variables = {}
+        self.variables: dict = {}
 
         # Create a new LLVM function
         self.function_type = ir.FunctionType(ir.VoidType(), [])
@@ -156,7 +156,7 @@ class LlvmGenerator:
 
 class LLVMGenerator(ABC):
     @abstractmethod
-    def get(self, *args):
+    def get(self):
         ...
 
 
@@ -210,16 +210,16 @@ class Int(LLVMGenerator):
         return ir.Constant(int32, self.integer)
 
 
-class Printf:
-    def __init__(self, module: ir.Module, builder: ir.IRBuilder) -> None:
-        self.module = module
-        self.builder = builder
-        # Load the printf function
-        self.printf_func = ir.Function(
-            self.module,
-            ir.FunctionType(int32, [void_pointer], var_arg=True),
-            name="printf",
-        )
-
-    def __call__(self):
-        self.builder.call(self.printf_func, [a, self.builder.load(variable["var"])])
+# class Printf:
+#     def __init__(self, module: ir.Module, builder: ir.IRBuilder) -> None:
+#         self.module = module
+#         self.builder = builder
+#         # Load the printf function
+#         self.printf_func = ir.Function(
+#             self.module,
+#             ir.FunctionType(int32, [void_pointer], var_arg=True),
+#             name="printf",
+#         )
+#
+#     def __call__(self):
+#         self.builder.call(self.printf_func, [a, self.builder.load(variable["var"])])

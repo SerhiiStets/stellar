@@ -2,24 +2,24 @@ import os
 import sys
 from pprint import pprint
 
-import compiler
 import llvm_code_generator
-import new_lexer
-import new_parser
+import st_compiler
+import st_lexer
+import st_parser
 
 
 def process_file(file_path):
     with open(file_path, "r") as file:
         code = file.read()
 
-        lexer = new_lexer.Lexer(code)
+        lexer = st_lexer.Lexer(code)
         tokens = lexer.parse()
-        print(f"\n\nLexer:\n")
+        print("\n\nLexer:\n")
         pprint(tokens, sort_dicts=False)
 
-        parser = new_parser.Parser(tokens)
+        parser = st_parser.Parser(tokens)
         ast = parser.parse()
-        print(f"\n\nParser:\n")
+        print("\n\nParser:\n")
         pprint(ast, sort_dicts=False)
 
         llvm_generator = llvm_code_generator.LlvmGenerator(ast)
@@ -27,7 +27,8 @@ def process_file(file_path):
         print(llvm_generator.module)
 
         print("\nResult:")
-        compiler.compile_stellar(str(llvm_generator.module))
+        stellar_compiler = st_compiler.StellarCompiler(str(llvm_generator.module))
+        stellar_compiler.compile()
 
 
 def process_directory(directory_path):
