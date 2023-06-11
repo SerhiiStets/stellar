@@ -96,6 +96,7 @@ class ExpressionParser(BaseParser):
             self.tokens
             and self.tokens[0].token_type in ["PLUS", "MINUS"]
             and self.tokens[0].token_type != "SEMICOLON"
+            and self.tokens[0].token_type != "RPAREN"
         ):
             operator = self.tokens.pop(0).token_type
             right_parser = TermParser(self.tokens)
@@ -119,6 +120,7 @@ class TermParser(ExpressionParser):
             self.tokens
             and self.tokens[0].token_type in ["MULTIPLY", "DIVIDE"]
             and self.tokens[0].token_type != "SEMICOLON"
+            and self.tokens[0].token_type != "RPAREN"
         ):
             operator = self.tokens.pop(0).token_type
             right_parser = FactorParser(self.tokens)
@@ -158,7 +160,7 @@ class PrimaryParser(BaseParser):
 
         if self.tokens[0].token_type == "STRING":
             value = self.tokens.pop(0).pattern
-            return {"node_type": "STR", "value": value}
+            return {"node_type": "STR", "value": value[1:-1]}
 
         if self.tokens[0].token_type == "IDENTIFIER":
             name = self.tokens.pop(0).pattern

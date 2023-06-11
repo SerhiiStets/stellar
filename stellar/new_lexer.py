@@ -26,7 +26,7 @@ TOKEN_TYPES = [
     Token("PLUS", r"\+"),
     Token("MINUS", r"-"),
     Token("MULTIPLY", r"\*"),
-    Token("DIVIDE", r"/"),
+    Token("DIVIDE", r"/(?![/])"), # Matches '/' not followed by '/' 
     Token("LPAREN", r"\("),
     Token("RPAREN", r"\)"),
     Token("EQUALS", r"="),
@@ -38,12 +38,13 @@ TOKEN_TYPES = [
     # Token("TYPE", r":\s*(int|float|str|list|dict)"),
     Token("DOT", r"\."),
     Token("PRINT", r"print"),
+    Token("STRING", r'"(?:\\.|[^"])*"'),
     Token("IDENTIFIER", r"[a-zA-Z_]\w*"),
 ]
 
 # Define a pattern to match whitespace characters
 WHITESPACE_PATTERN = r"\s+"
-COMMENT_PATTERN = r"/.*"
+COMMENT_PATTERN = r"//.*"
 
 
 class Lexer:
@@ -94,4 +95,5 @@ class Lexer:
                     line_number=self._line_number,
                 )
 
+        # TODO wrong line number
         return self.tokens

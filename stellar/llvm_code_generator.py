@@ -111,6 +111,8 @@ class LlvmGenerator:
                 raise ValueError(f"Invalid operator: {operator}")
         elif node["node_type"] == "INT":
             return Int(node["value"]).get()
+        elif node["node_type"] == "STR":
+            return Str(self.builder, node["value"]).get()
         elif node["node_type"] == "variable":
             return self.builder.load(self.variables[node["name"]]["var"])
         else:
@@ -196,7 +198,6 @@ class Str(LLVMGenerator):
             [ir.Constant(int32, 0), ir.Constant(int32, len(self.string))],
         )
         self.builder.store(ir.Constant(ir.IntType(8), 0), ptr)
-        print(type(self.builder.bitcast(format_variable, void_pointer)))
         # Bitcast the format string variable to an i8* type and return it
         return self.builder.bitcast(format_variable, void_pointer)
 
