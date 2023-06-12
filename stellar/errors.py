@@ -1,13 +1,12 @@
 # TODO
 
 
-class InvalidSymbol(Exception):
+class SyntaxError(Exception):
     def __init__(self, code, position, line_number) -> None:
         self._code = code
         self._position = position
         self._line_number = line_number
-
-        self.message = f"InvalidSymbol '{self._code[self._position]}'\
+        self.message = f"Invalid syntax '{self._code[self._position]}'\
         on line {self._line_number}\n\
         {code.splitlines()[line_number]}"
 

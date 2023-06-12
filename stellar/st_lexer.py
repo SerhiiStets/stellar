@@ -12,33 +12,55 @@ class Token:
     line_number: int = 0
 
 
+COMMENTS = [
+    Token("COMMENT", r"//.*"),
+    Token("MULTI_LINE_COMMENT", r"(?s)/\\*.*?\\*/"),
+]
+
 VAR_TYPES = [
     Token("TYPE_INT", r"int"),
     Token("TYPE_FLOAT", r"float"),
-    Token("TYPE_STRING", r"str"),
+    Token("TYPE_STR", r"str"),
     Token("TYPE_LIST", r"list"),
     Token("TYPE_DICT", r"dict"),
     Token("TYPE_BOOL", r"bool"),
+    Token("TYPE_LIST", r"list"),
 ]
 
-TOKEN_TYPES = [
+VAR_VALUES = [
+    Token("FLOAT", r"\d+\.\d+"),
+    Token("STR", r'"(?:\\.|[^"])*"'),
     Token("INTEGER", r"\d+"),
+]
+
+OPEATORS = [
     Token("PLUS", r"\+"),
     Token("MINUS", r"-"),
     Token("MULTIPLY", r"\*"),
     Token("DIVIDE", r"/(?![/])"),  # Matches '/' not followed by '/'
+]
+
+GROUPING_SYMBOLS = [
     Token("LPAREN", r"\("),
     Token("RPAREN", r"\)"),
-    Token("EQUALS", r"="),
-    Token("SEMICOLON", r";"),
     Token("LBRACE", r"{"),
     Token("RBRACE", r"}"),
-    Token("COLON", r":"),
+    Token("LBRACKET", r"\["),
+    Token("RBRACKET", r"\]"),
+]
+
+TOKEN_TYPES = [
+    *COMMENTS,
+    *OPEATORS,
+    *GROUPING_SYMBOLS,
     *VAR_TYPES,
-    # Token("TYPE", r":\s*(int|float|str|list|dict)"),
+    *VAR_VALUES,
+    Token("EQUALS", r"="),
+    Token("SEMICOLON", r";"),
+    Token("COLON", r":"),
     Token("DOT", r"\."),
+    Token("COMMA", r","),
     Token("PRINT", r"print"),
-    Token("STRING", r'"(?:\\.|[^"])*"'),
     Token("IDENTIFIER", r"[a-zA-Z_]\w*"),
 ]
 
@@ -61,16 +83,13 @@ class Lexer:
 
             if self.input_code[self._position] == "\n":
                 self._line_number += 1
+
             # Skip whitespace characters
             whitespace_match = re.match(
                 WHITESPACE_PATTERN, self.input_code[self._position :]
             )
-            comment_match = re.match(COMMENT_PATTERN, self.input_code[self._position :])
             if whitespace_match:
                 self._position += whitespace_match.end()
-                continue
-            elif comment_match:
-                self._position += comment_match.end()
                 continue
 
             for token in TOKEN_TYPES:
@@ -82,14 +101,15 @@ class Lexer:
                     token = Token(
                         token.token_type, value, self._position, self._line_number
                     )
-                    self.tokens.append(token)
+                    if token.token_type not in ["COMMENT", "MULTI_LINE_COMMENT"]:
+                        self.tokens.append(token)
                     self._position = match.end()
                     matched = True
                     break
 
             if not matched:
                 # TODO
-                raise errors.InvalidSymbol(
+                raise errors.SyntaxError(
                     position=self._position,
                     code=self.input_code,
                     line_number=self._line_number,

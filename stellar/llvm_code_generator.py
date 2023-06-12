@@ -5,6 +5,8 @@ from llvmlite import ir
 bool_t = ir.IntType(1)
 int8 = ir.IntType(8)
 int32 = ir.IntType(32)
+flt32 = ir.FloatType()
+flt64 = ir.DoubleType()
 void_pointer = ir.IntType(8).as_pointer()
 
 true_bit = bool_t(1)
@@ -15,6 +17,8 @@ false_byte = int8(0)
 PRINT_MAP = {
     "INT": "%d",
     "STR": "%s",
+    "FLOAT": "%f",
+    # TODO list
 }
 
 
@@ -61,22 +65,6 @@ class LlvmGenerator:
 
             format_str_ptr = Str(self.builder, format_str).get()
 
-            # format_str_const = ir.Constant(
-            #     ir.ArrayType(int8, len(format_str)),
-            #     bytearray(format_str.encode("utf8")),
-            # )
-            #
-            # format_str_global = ir.GlobalVariable(
-            #     self.module, format_str_const.type, name=f"format_str_{variable_name}"
-            # )
-            #
-            # format_str_global.linkage = "internal"
-            # format_str_global.global_constant = True
-            # format_str_global.initializer = format_str_const
-            #
-            # # Create a pointer to the format string
-            # format_str_ptr = self.builder.bitcast(format_str_global, void_pointer)
-
             self.builder.call(
                 self.printf_func, [format_str_ptr, self.builder.load(variable["var"])]
             )
@@ -109,10 +97,9 @@ class LlvmGenerator:
                 result = self.builder.sdiv(left_value, right_value)
             else:
                 raise ValueError(f"Invalid operator: {operator}")
-        elif node["node_type"] == "INT":
-            return Int(node["value"]).get()
-        elif node["node_type"] == "STR":
-            return Str(self.builder, node["value"]).get()
+        elif node["node_type"] in PRINT_MAP.keys():
+            value = VariableGeneratorFactory.create_generator(self.builder, node)
+            return value.get()
         elif node["node_type"] == "variable":
             return self.builder.load(self.variables[node["name"]]["var"])
         else:
@@ -120,38 +107,45 @@ class LlvmGenerator:
         return result
 
     def generate_llvm_ir(self, tree):
-        if isinstance(tree, list):
-            for node in tree:
-                node_type = node["node_type"]
-                if node_type == "variable_declaration":
-                    variable_name = node["variable_name"]
-                    variable_type = node["variable_type"]
-                    expression = node["expression"]
-                    # TODO types
-                    variable = self.builder.alloca(ir.IntType(32), name=variable_name)
-                    if expression:
-                        result = self.parse_node(expression)
-                        self.builder.store(result, variable)
-                    self.variables[variable_name] = {
-                        "type": variable_type,
-                        "var": variable,
-                    }
+        for node in tree:
+            node_type = node["node_type"]
+            if node_type == "variable_declaration":
+                variable_name = node["variable_name"]
+                variable_type = node["variable_type"]
+                expression = node["expression"]
+                # TODO types
+                if variable_type == "INT":
+                    variable = self.builder.alloca(int32, name=variable_name)
+                elif variable_type == "STR":
+                    variable = self.builder.alloca(void_pointer, name=variable_name)
+                elif variable_type == "FLOAT":
+                    variable = self.builder.alloca(flt64, name=variable_name)
+                elif variable_type == "LIST":
+                    # TODO
+                    continue
+                else:
+                    variable = None
 
-                elif node_type == "assignment_statement":
-                    variable_name = node["variable_name"]
-                    expression = node["expression"]
-
-                    # Generate LLVM IR code for the expression
+                if expression:
                     result = self.parse_node(expression)
+                    self.builder.store(result, variable)
+                self.variables[variable_name] = {
+                    "type": variable_type,
+                    "var": variable,
+                }
 
-                    # Create a new LLVM variable
-                    self.builder.store(result, self.variables[variable_name]["var"])
-                elif node_type == "print_statement":
-                    expression = node["expression"]
-                    self.printf(expression)
-        elif isinstance(tree, dict):
-            # TODO
-            pass
+            elif node_type == "assignment_statement":
+                variable_name = node["variable_name"]
+                expression = node["expression"]
+
+                # Generate LLVM IR code for the expression
+                result = self.parse_node(expression)
+
+                # Create a new LLVM variable
+                self.builder.store(result, self.variables[variable_name]["var"])
+            elif node_type == "print_statement":
+                expression = node["expression"]
+                self.printf(expression)
 
 
 class LLVMGenerator(ABC):
@@ -167,6 +161,8 @@ class VariableGeneratorFactory:
             return Str(builder, expression["value"])
         elif expression["node_type"] == "INT":
             return Int(expression["value"])
+        elif expression["node_type"] == "FLOAT":
+            return Float(expression["value"])
         else:
             # TODO
             raise ValueError(f"Unsupported node type: {expression['node_type']}")
@@ -197,9 +193,17 @@ class Str(LLVMGenerator):
             format_variable,
             [ir.Constant(int32, 0), ir.Constant(int32, len(self.string))],
         )
-        self.builder.store(ir.Constant(ir.IntType(8), 0), ptr)
+        self.builder.store(ir.Constant(int8, 0), ptr)
         # Bitcast the format string variable to an i8* type and return it
         return self.builder.bitcast(format_variable, void_pointer)
+
+
+class Float(LLVMGenerator):
+    def __init__(self, flt) -> None:
+        self.flt = flt
+
+    def get(self) -> ir.Constant:
+        return ir.Constant(flt64, self.flt)
 
 
 class Int(LLVMGenerator):
@@ -208,6 +212,11 @@ class Int(LLVMGenerator):
 
     def get(self) -> ir.Constant:
         return ir.Constant(int32, self.integer)
+
+
+class List(LLVMGenerator):
+    def get(self):
+        pass
 
 
 # class Printf:

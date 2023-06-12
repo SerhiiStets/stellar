@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+import errors
 from st_lexer import Token
 
 variables: dict = {}
@@ -65,8 +66,7 @@ class AssignmentStatementParser(BaseParser):
 
             if self.tokens[0].token_type == "EQUALS":
                 self.tokens.pop(0)
-                expression_parser = ExpressionParser(self.tokens)
-                expression = expression_parser.parse()
+                expression = ExpressionParser(self.tokens).parse()
             elif self.tokens[0].token_type != "SEMICOLON":
                 # TODO
                 raise RuntimeError()
@@ -85,29 +85,49 @@ class AssignmentStatementParser(BaseParser):
             return []
 
 
+class ListParser(BaseParser):
+    def parse(self):
+        self.tokens.pop(0)
+        elements = []
+        while self.tokens[0].token_type != "RBRACKET":
+            element = ExpressionParser(self.tokens).parse()
+            elements.append(element)
+
+            if self.tokens[0].token_type == "COMMA":
+                self.tokens.pop(0)
+
+        self.tokens.pop(0)
+        return {
+            "node_type": "LIST",
+            "expression": elements,
+        }
+
+
 class ExpressionParser(BaseParser):
     """Precedence climbing method."""
 
     def parse(self):
-        left_parser = TermParser(self.tokens)
-        left_operand = left_parser.parse()
+        if self.tokens[0].token_type == "LBRACKET":
+            left_operand = ListParser(self.tokens).parse()
+        else:
+            left_parser = TermParser(self.tokens)
+            left_operand = left_parser.parse()
 
-        while (
-            self.tokens
-            and self.tokens[0].token_type in ["PLUS", "MINUS"]
-            and self.tokens[0].token_type != "SEMICOLON"
-            and self.tokens[0].token_type != "RPAREN"
-        ):
-            operator = self.tokens.pop(0).token_type
-            right_parser = TermParser(self.tokens)
-            right_operand = right_parser.parse()
-            left_operand = {
-                "node_type": "binary_operation",
-                "operator": operator,
-                "left_operand": left_operand,
-                "right_operand": right_operand,
-            }
-
+            while (
+                self.tokens
+                and self.tokens[0].token_type in ["PLUS", "MINUS"]
+                and self.tokens[0].token_type != "SEMICOLON"
+                and self.tokens[0].token_type != "RPAREN"
+            ):
+                operator = self.tokens.pop(0).token_type
+                right_parser = TermParser(self.tokens)
+                right_operand = right_parser.parse()
+                left_operand = {
+                    "node_type": "binary_operation",
+                    "operator": operator,
+                    "left_operand": left_operand,
+                    "right_operand": right_operand,
+                }
         return left_operand
 
 
@@ -158,7 +178,7 @@ class PrimaryParser(BaseParser):
             value = self.tokens.pop(0).pattern
             return {"node_type": "FLOAT", "value": value}
 
-        if self.tokens[0].token_type == "STRING":
+        if self.tokens[0].token_type == "STR":
             value = self.tokens.pop(0).pattern
             return {"node_type": "STR", "value": value[1:-1]}
 
@@ -172,7 +192,11 @@ class PrimaryParser(BaseParser):
             else:
                 raise ValueError(f"{name} variable is not declared!")
 
-        raise ValueError(f"Invalid expression at position {self.tokens[0]}")
+        raise errors.SyntaxError(
+            code="",
+            position=self.tokens[0].position,
+            line_number=self.tokens[0].line_number,
+        )
 
 
 class PrintParser(BaseParser):
@@ -180,7 +204,6 @@ class PrintParser(BaseParser):
         self.tokens.pop(0)  # pop print
         if self.tokens[0].token_type != "LPAREN":
             raise RuntimeError()
-
         expression_parser = ExpressionParser(self.tokens)
         expression = expression_parser.parse()
         return {"node_type": "print_statement", "expression": expression}

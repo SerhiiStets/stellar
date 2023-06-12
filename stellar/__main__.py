@@ -6,6 +6,7 @@ import llvm_code_generator
 import st_compiler
 import st_lexer
 import st_parser
+import st_semantics
 
 
 def process_file(file_path):
@@ -22,6 +23,9 @@ def process_file(file_path):
         print("\n\nParser:\n")
         pprint(ast, sort_dicts=False)
 
+        semantic_analyzer = st_semantics.SemanticAnalyzer(ast)
+        semantic_analyzer.analyze()
+
         llvm_generator = llvm_code_generator.LlvmGenerator(ast)
         print("\n\nCompiler:\n")
         print(llvm_generator.module)
@@ -34,7 +38,7 @@ def process_file(file_path):
 def process_directory(directory_path):
     for root, _, files in os.walk(directory_path):
         for file in files:
-            if file.endswith(".st"):
+            if file.endswith(".stl"):
                 file_path = os.path.join(root, file)
                 process_file(file_path)
 
@@ -49,7 +53,7 @@ def main():
 
     if os.path.isfile(path):
         # If the provided path is a file, process it
-        if path.endswith(".st"):
+        if path.endswith(".stl"):
             process_file(path)
         else:
             raise Exception("Not a stellar file.")
